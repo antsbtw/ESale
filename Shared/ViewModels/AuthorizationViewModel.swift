@@ -22,6 +22,12 @@ struct ParentQuotasResponse: Codable {
     let quotas: [ParentQuota]
 }
 
+// MARK: - 待激活终端用户响应
+struct PendingEndUsersResponse: Codable {
+    let items: [AgentSummary]
+    let total: Int
+}
+
 @MainActor
 class AuthorizationViewModel: ObservableObject {
     // MARK: - Published Properties
@@ -30,9 +36,14 @@ class AuthorizationViewModel: ObservableObject {
     @Published var quotas: [AgentQuota] = []
     @Published var quotaSummary: QuotaSummary?
     
-    // 激活请求相关
+    // 激活请求相关（采购审批）
     @Published var pendingRequests: [ActivationRequest] = []
     @Published var pendingCount: Int = 0
+    
+    // 待激活终端用户（新增）
+    @Published var pendingEndUsers: [AgentSummary] = []
+    @Published var pendingEndUserCount: Int = 0
+    @Published var isLoadingEndUsers = false
     
     // 套餐相关
     @Published var packages: [AgentPackage] = []
@@ -52,7 +63,6 @@ class AuthorizationViewModel: ObservableObject {
     
     // MARK: - Init
     init() {
-        // 初始化时加载数据
         Task {
             await loadAll()
         }
@@ -63,17 +73,18 @@ class AuthorizationViewModel: ObservableObject {
         async let summary: () = loadQuotaSummary()
         async let requests: () = loadPendingRequests()
         async let packages: () = loadPackages()
-        async let parentQuotas: () = loadParentQuotas()  // ⭐ 新增
+        async let parentQuotas: () = loadParentQuotas()
+        async let endUsers: () = loadPendingEndUsers()  // 新增
         
         await summary
         await requests
         await packages
-        await parentQuotas  // ⭐ 新增
+        await parentQuotas
+        await endUsers  // 新增
     }
     
     // MARK: - 配额管理
     
-    /// 加载配额汇总
     func loadQuotaSummary() async {
         isLoadingQuota = true
         defer { isLoadingQuota = false }
@@ -87,7 +98,6 @@ class AuthorizationViewModel: ObservableObject {
         }
     }
     
-    /// 加载配额详情列表
     func loadQuotaDetails() async {
         isLoadingQuota = true
         defer { isLoadingQuota = false }
@@ -101,9 +111,74 @@ class AuthorizationViewModel: ObservableObject {
         }
     }
     
-    // MARK: - 激活请求管理
+    // MARK: - 待激活终端用户管理（新增）
     
-    /// 加载待激活请求列表
+    func loadPendingEndUsers() async {
+        isLoadingEndUsers = true
+        defer { isLoadingEndUsers = false }
+        
+        do {
+            let response: PendingEndUsersResponse = try await apiClient.get(.pendingEndUsers)
+            self.pendingEndUsers = response.items
+            self.pendingEndUserCount = response.total
+            print("📱 待激活终端用户: \(response.total) 个")
+        } catch {
+            self.pendingEndUsers = []
+            self.pendingEndUserCount = 0
+            print("❌ 加载待激活终端用户失败: \(error)")
+        }
+    }
+    
+    /// 激活终端用户
+    func activateEndUser(userId: String) async -> Bool {
+        do {
+            struct ApproveResponse: Codable {
+                let message: String
+            }
+            
+            let _: ApproveResponse = try await apiClient.post(
+                .activateEndUser(userId: userId, approved: true, remark: nil)
+            )
+            
+            print("✅ 终端用户激活成功")
+            
+            // 刷新数据
+            await loadPendingEndUsers()
+            await loadQuotaSummary()
+            
+            return true
+        } catch {
+            self.errorMessage = "激活失败: \(error.localizedDescription)"
+            print("❌ 激活终端用户失败: \(error)")
+            return false
+        }
+    }
+    
+    /// 拒绝终端用户
+    func rejectEndUser(userId: String, reason: String = "") async -> Bool {
+        do {
+            struct ApproveResponse: Codable {
+                let message: String
+            }
+            
+            let _: ApproveResponse = try await apiClient.post(
+                .activateEndUser(userId: userId, approved: false, remark: reason)
+            )
+            
+            print("✅ 终端用户已拒绝")
+            
+            await loadPendingEndUsers()
+            
+            return true
+        } catch {
+            self.errorMessage = "拒绝失败: \(error.localizedDescription)"
+            print("❌ 拒绝终端用户失败: \(error)")
+            return false
+        }
+    }
+    
+    // MARK: - 激活请求管理（采购审批）
+    
     func loadPendingRequests() async {
         isLoadingRequests = true
         defer { isLoadingRequests = false }
@@ -118,7 +193,6 @@ class AuthorizationViewModel: ObservableObject {
         }
     }
     
-    /// 确认激活（代理已收款）
     func confirmActivation(requestId: String, remark: String? = nil) async -> Bool {
         do {
             struct ConfirmResponse: Codable {
@@ -129,7 +203,6 @@ class AuthorizationViewModel: ObservableObject {
             
             print("✅ 激活成功: \(response.status)")
             
-            // 激活成功，刷新数据
             await loadPendingRequests()
             await loadQuotaSummary()
             
@@ -141,7 +214,6 @@ class AuthorizationViewModel: ObservableObject {
         }
     }
     
-    /// 拒绝激活
     func rejectActivation(requestId: String, reason: String = "") async -> Bool {
         do {
             struct RejectResponse: Codable {
@@ -152,7 +224,6 @@ class AuthorizationViewModel: ObservableObject {
             
             print("✅ 拒绝成功: \(response.status)")
             
-            // 刷新列表
             await loadPendingRequests()
             
             return true
@@ -165,7 +236,6 @@ class AuthorizationViewModel: ObservableObject {
     
     // MARK: - 套餐管理
     
-    /// 加载套餐列表
     func loadPackages() async {
         isLoadingPackages = true
         defer { isLoadingPackages = false }
@@ -179,19 +249,20 @@ class AuthorizationViewModel: ObservableObject {
         }
     }
     
-    /// 采购套餐（创建支付会话）
     func purchasePackage(package: AgentPackage) async -> Bool {
         do {
+            let sellerId = AuthService.shared.currentUser?.parentId
+            
             let _: SuccessResponse = try await apiClient.post(
                 .createPaymentSession(
                     packageId: package.id,
-                    amount: package.price
+                    amount: package.price,
+                    sellerId: sellerId
                 )
             )
             
             print("✅ 采购请求已提交")
             
-            // 刷新数据
             await loadPendingRequests()
             
             return true
@@ -202,7 +273,6 @@ class AuthorizationViewModel: ObservableObject {
         }
     }
     
-    /// 检查配额是否充足
     func checkQuota(productId: String) async -> Bool {
         do {
             struct QuotaCheckResponse: Codable {
@@ -231,14 +301,12 @@ class AuthorizationViewModel: ObservableObject {
             self.parentQuotas = response.quotas
             print("📦 上级可售配额: \(response.quotas.count) 个产品")
         } catch {
-            // 可能没有上级代理，这是正常的
             self.parentQuotas = []
             self.parentId = nil
             print("ℹ️ 无上级代理或配额: \(error.localizedDescription)")
         }
     }
     
-    // MARK: - 向上级采购
     func purchaseFromParent(productId: String, sellerId: String, quantity: Int, amount: Double) async -> Bool {
         do {
             let _: SuccessResponse = try await apiClient.post(

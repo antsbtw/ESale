@@ -46,25 +46,26 @@ struct ProfileView: View {
                     }
                 }
                 
-                // 管理中心（仅管理员可见）
-                if authService.currentUser?.role == .admin {
-                    Section("管理中心") {
-                        NavigationLink {
-                            PurchaseApprovalView()
-                        } label: {
-                            Label("采购审批", systemImage: "doc.text.magnifyingglass")
-                        }
-                        
+                // 业务管理（所有角色都可见）
+                Section("业务管理") {
+                    NavigationLink {
+                        PackageManagementView()
+                    } label: {
+                        Label("套餐管理", systemImage: "shippingbox.fill")
+                    }
+                    
+                    NavigationLink {
+                        PurchaseApprovalView()
+                    } label: {
+                        Label("进货审批", systemImage: "doc.text.magnifyingglass")
+                    }
+                    
+                    // 仅管理员显示产品管理
+                    if authService.currentUser?.role == .admin {
                         NavigationLink {
                             ProductManagementView()
                         } label: {
                             Label("产品管理", systemImage: "cube.box.fill")
-                        }
-                        
-                        NavigationLink {
-                            PackageManagementView()
-                        } label: {
-                            Label("套餐管理", systemImage: "shippingbox.fill")
                         }
                     }
                 }

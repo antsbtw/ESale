@@ -15,16 +15,19 @@ class PackageManagementViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     
-    // MARK: - 加载套餐列表（管理员查看全部）
+    // MARK: - 加载我的套餐列表
     func loadPackages() async {
         isLoading = true
         errorMessage = nil
         
         do {
-            let list: [AgentPackage] = try await APIClient.shared.get(.packageListAll)
+            // 使用 /agent/package/mine 获取我创建的套餐
+            let list: [AgentPackage] = try await APIClient.shared.get(.myPackages)
             self.packages = list
+            print("📦 加载到 \(list.count) 个我的套餐")
         } catch {
             errorMessage = "加载失败: \(error.localizedDescription)"
+            print("❌ 加载套餐失败: \(error)")
         }
         
         isLoading = false

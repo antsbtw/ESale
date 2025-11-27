@@ -41,7 +41,15 @@ class PurchaseApprovalViewModel: ObservableObject {
         errorMessage = nil
         
         do {
-            let list: [PurchaseRequest] = try await APIClient.shared.get(.adminPendingPayments(status: "pending"))
+            // 根据角色选择不同的API
+            let list: [PurchaseRequest]
+            if AuthService.shared.currentUser?.role == .admin {
+                // 管理员：查看所有一级代理的请求
+                list = try await APIClient.shared.get(.adminPendingPayments(status: "pending"))
+            } else {
+                // 代理商：查看下级的请求
+                list = try await APIClient.shared.get(.agentPurchasePending(status: "pending"))
+            }
             self.pendingRequests = list
             print("📋 加载到 \(list.count) 个待审批采购请求")
         } catch {
@@ -55,9 +63,16 @@ class PurchaseApprovalViewModel: ObservableObject {
     // MARK: - 确认采购
     func confirmPurchase(sessionId: String, remark: String? = nil) async -> Bool {
         do {
-            let _: SuccessResponse = try await APIClient.shared.post(
-                .adminConfirmPayment(sessionId: sessionId, remark: remark)
-            )
+            // 根据角色选择不同的API
+            if AuthService.shared.currentUser?.role == .admin {
+                let _: SuccessResponse = try await APIClient.shared.post(
+                    .adminConfirmPayment(sessionId: sessionId, remark: remark)
+                )
+            } else {
+                let _: SuccessResponse = try await APIClient.shared.post(
+                    .agentPurchaseConfirm(sessionId: sessionId, remark: remark)
+                )
+            }
             print("✅ 采购确认成功")
             await loadPendingRequests()
             return true
@@ -71,9 +86,16 @@ class PurchaseApprovalViewModel: ObservableObject {
     // MARK: - 拒绝采购
     func rejectPurchase(sessionId: String, remark: String? = nil) async -> Bool {
         do {
-            let _: SuccessResponse = try await APIClient.shared.post(
-                .rejectPayment(sessionId: sessionId, remark: remark)
-            )
+            // 根据角色选择不同的API
+            if AuthService.shared.currentUser?.role == .admin {
+                let _: SuccessResponse = try await APIClient.shared.post(
+                    .rejectPayment(sessionId: sessionId, remark: remark)
+                )
+            } else {
+                let _: SuccessResponse = try await APIClient.shared.post(
+                    .agentPurchaseReject(sessionId: sessionId, remark: remark)
+                )
+            }
             print("✅ 采购已拒绝")
             await loadPendingRequests()
             return true
@@ -83,6 +105,7 @@ class PurchaseApprovalViewModel: ObservableObject {
             return false
         }
     }
+    
 }
 
 struct PurchaseApprovalView: View {

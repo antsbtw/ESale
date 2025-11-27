@@ -58,7 +58,7 @@ enum APIEndpoint {
     case updatePackageStatus(id: String, isActive: Bool)
     case deletePackage(id: String)
     // ⭐⭐⭐ 采购（创建支付会话）
-    case createPaymentSession(packageId: String, amount: Double)
+    case createPaymentSession(packageId: String, amount: Double, sellerId: String?)
     // ⭐⭐⭐ 管理员采购审批
     case adminPendingPayments(status: String)
     case adminConfirmPayment(sessionId: String, remark: String?)
@@ -69,6 +69,9 @@ enum APIEndpoint {
     // ⭐⭐⭐ 查询上级可售配额
     case parentQuotas
     case createPaymentSessionFromParent(sellerId: String, productId: String, quantity: Int, amount: Double)
+    case myPackages  // 我创建的套餐（套餐管理用）
+    case pendingEndUsers  // 待激活终端用户
+    case activateEndUser(userId: String, approved: Bool, remark: String?)
     
     var path: String {
         switch self {
@@ -159,6 +162,12 @@ enum APIEndpoint {
             return "/agent/parent/quotas"
         case .createPaymentSessionFromParent:
             return "/payment/session/create"
+        case .myPackages:
+            return "/agent/package/mine"
+        case .pendingEndUsers:
+            return "/agent/enduser/pending"
+        case .activateEndUser:
+            return "/agent/approve"  // 复用审批接口
         }
     }
     
@@ -280,11 +289,15 @@ enum APIEndpoint {
             
         case .updatePackageStatus(let id, let isActive):
             return ["id": id, "isActive": isActive]
-        case .createPaymentSession(let packageId, let amount):
-            return [
+        case .createPaymentSession(let packageId, let amount, let sellerId):
+            var params: [String: Any] = [
                 "packageId": packageId,
                 "amount": amount
             ]
+            if let sellerId = sellerId {
+                params["sellerId"] = sellerId
+            }
+            return params
         case .adminConfirmPayment(let sessionId, let remark):
             var params: [String: Any] = ["sessionId": sessionId]
             if let remark = remark {
@@ -312,6 +325,10 @@ enum APIEndpoint {
                 "amount": amount,
                 "buyerType": "agent"
             ]
+        case .activateEndUser(let userId, let approved, let remark):
+            var params: [String: Any] = ["agentId": userId, "approved": approved]
+            if let remark = remark { params["remark"] = remark }
+            return params
         default:
             return nil
         }
