@@ -63,7 +63,6 @@ class PurchaseApprovalViewModel: ObservableObject {
     // MARK: - 确认采购
     func confirmPurchase(sessionId: String, remark: String? = nil) async -> Bool {
         do {
-            // 根据角色选择不同的API
             if AuthService.shared.currentUser?.role == .admin {
                 let _: SuccessResponse = try await APIClient.shared.post(
                     .adminConfirmPayment(sessionId: sessionId, remark: remark)
@@ -75,6 +74,10 @@ class PurchaseApprovalViewModel: ObservableObject {
             }
             print("✅ 采购确认成功")
             await loadPendingRequests()
+            
+            // 发送通知
+            NotificationCenter.default.post(name: .purchaseDataChanged, object: nil)
+            
             return true
         } catch {
             errorMessage = "确认失败: \(error.localizedDescription)"
@@ -82,11 +85,10 @@ class PurchaseApprovalViewModel: ObservableObject {
             return false
         }
     }
-    
+
     // MARK: - 拒绝采购
     func rejectPurchase(sessionId: String, remark: String? = nil) async -> Bool {
         do {
-            // 根据角色选择不同的API
             if AuthService.shared.currentUser?.role == .admin {
                 let _: SuccessResponse = try await APIClient.shared.post(
                     .rejectPayment(sessionId: sessionId, remark: remark)
@@ -98,6 +100,10 @@ class PurchaseApprovalViewModel: ObservableObject {
             }
             print("✅ 采购已拒绝")
             await loadPendingRequests()
+            
+            // 发送通知
+            NotificationCenter.default.post(name: .purchaseDataChanged, object: nil)
+            
             return true
         } catch {
             errorMessage = "拒绝失败: \(error.localizedDescription)"
@@ -147,8 +153,11 @@ struct PurchaseApprovalView: View {
         .refreshable {
             await viewModel.loadPendingRequests()
         }
-        .task {
-            await viewModel.loadPendingRequests()
+        // 改为
+        .onAppear {
+            Task {
+                await viewModel.loadPendingRequests()
+            }
         }
         .alert("确认采购", isPresented: $showConfirmAlert) {
             Button("取消", role: .cancel) { }

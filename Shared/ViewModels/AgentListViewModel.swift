@@ -22,11 +22,7 @@ class AgentListViewModel: ObservableObject {
     
     private let pageSize = 20
     
-    init() {
-        Task {
-            await loadCurrentUser()
-        }
-    }
+    init() {}
     
     private func loadCurrentUser() async {
         do {
@@ -60,6 +56,11 @@ class AgentListViewModel: ObservableObject {
     
     // MARK: - 加载代理列表
     func loadAgents(status: AgentStatus? = nil) async {
+        
+        if currentUserId.isEmpty {
+            await loadCurrentUser()
+        }
+        
         isLoading = true
         errorMessage = nil
         

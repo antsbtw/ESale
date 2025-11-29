@@ -13,8 +13,8 @@ struct MainTabView: View {
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            // Tab 1: 首页
-            DashboardView()
+            // Tab 1: 首页 - 传递 binding
+            DashboardView(selectedTab: $selectedTab)
                 .tabItem {
                     Label("首页", systemImage: "house.fill")
                 }
@@ -50,9 +50,4 @@ struct MainTabView: View {
         }
         .tint(.blue)
     }
-}
-
-#Preview {
-    MainTabView()
-        .environmentObject(AuthService.shared)
 }

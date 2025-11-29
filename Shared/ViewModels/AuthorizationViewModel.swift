@@ -28,6 +28,16 @@ struct PendingEndUsersResponse: Codable {
     let total: Int
 }
 
+
+// MARK: - 已激活终端用户响应
+struct EndUserListResponse: Codable {
+    let items: [AgentSummary]
+    let total: Int
+    let page: Int
+    let pageSize: Int
+    let totalPages: Int
+}
+
 @MainActor
 class AuthorizationViewModel: ObservableObject {
     // MARK: - Published Properties
@@ -59,13 +69,15 @@ class AuthorizationViewModel: ObservableObject {
     @Published var parentId: String?
     @Published var isLoadingParentQuotas = false
     
+    // 已激活终端用户列表
+    @Published var activeEndUsers: [AgentSummary] = []
+    @Published var activeEndUserCount: Int = 0
+    @Published var isLoadingActiveUsers = false
+    
     private let apiClient = APIClient.shared
     
     // MARK: - Init
     init() {
-        Task {
-            await loadAll()
-        }
     }
     
     // MARK: - Load All Data
@@ -75,12 +87,14 @@ class AuthorizationViewModel: ObservableObject {
         async let packages: () = loadPackages()
         async let parentQuotas: () = loadParentQuotas()
         async let endUsers: () = loadPendingEndUsers()  // 新增
+        async let activeUsers: () = loadActiveEndUsers()  // 新增
         
         await summary
         await requests
         await packages
         await parentQuotas
         await endUsers  // 新增
+        await activeUsers
     }
     
     // MARK: - 配额管理
@@ -150,6 +164,49 @@ class AuthorizationViewModel: ObservableObject {
         } catch {
             self.errorMessage = "激活失败: \(error.localizedDescription)"
             print("❌ 激活终端用户失败: \(error)")
+            return false
+        }
+    }
+    
+    // MARK: - 已激活终端用户管理
+
+    func loadActiveEndUsers() async {
+        isLoadingActiveUsers = true
+        defer { isLoadingActiveUsers = false }
+        
+        do {
+            let response: EndUserListResponse = try await apiClient.get(.endUserList(page: 1, pageSize: 50))
+            self.activeEndUsers = response.items
+            self.activeEndUserCount = response.total
+            print("👥 已激活终端用户: \(response.total) 个")
+        } catch {
+            self.activeEndUsers = []
+            self.activeEndUserCount = 0
+            print("❌ 加载已激活终端用户失败: \(error)")
+        }
+    }
+
+    /// 停用终端用户
+    func deactivateEndUser(userId: String, reason: String = "") async -> Bool {
+        do {
+            struct DeactivateResponse: Codable {
+                let message: String
+            }
+            
+            let _: DeactivateResponse = try await apiClient.post(
+                .deactivateEndUser(userId: userId, reason: reason.isEmpty ? nil : reason)
+            )
+            
+            print("✅ 终端用户已停用")
+            
+            // 刷新列表
+            await loadActiveEndUsers()
+            await loadQuotaSummary()
+            
+            return true
+        } catch {
+            self.errorMessage = "停用失败: \(error.localizedDescription)"
+            print("❌ 停用终端用户失败: \(error)")
             return false
         }
     }

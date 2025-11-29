@@ -58,9 +58,12 @@ struct PackageManagementView: View {
         .refreshable {
             await viewModel.loadPackages()
         }
-        .task {
-            await viewModel.loadPackages()
-            await viewModel.loadProducts()
+        // 改为
+        .onAppear {
+            Task {
+                await viewModel.loadPackages()
+                await viewModel.loadProducts()
+            }
         }
         .sheet(isPresented: $showingCreateSheet) {
             PackageEditView(viewModel: viewModel, package: nil)

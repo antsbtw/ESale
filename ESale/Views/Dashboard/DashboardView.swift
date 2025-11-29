@@ -10,8 +10,11 @@ import SwiftUI
 struct DashboardView: View {
     @StateObject private var viewModel = DashboardViewModel()
     @EnvironmentObject var authService: AuthService
+    @Binding var selectedTab: Int
     
     @State private var showingQRCodes = false
+    @State private var showingPurchaseApproval = false
+    
     
     var body: some View {
         ScrollView {
@@ -37,14 +40,30 @@ struct DashboardView: View {
         .refreshable {
             await viewModel.refresh()
         }
-        .task {
-            if viewModel.stats == nil {
+        // 在 .onAppear 后面添加
+        .onAppear {
+            Task {
+                await viewModel.loadDashboard()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .purchaseDataChanged)) { _ in
+            Task {
+                await viewModel.loadDashboard()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .endUserDataChanged)) { _ in
+            Task {
                 await viewModel.loadDashboard()
             }
         }
         .sheet(isPresented: $showingQRCodes) {
             NavigationStack {
                 MyQRCodesView()
+            }
+        }
+        .sheet(isPresented: $showingPurchaseApproval) {
+            NavigationStack {
+                PurchaseApprovalView()
             }
         }
         .alert("提示", isPresented: $viewModel.showError) {
@@ -149,7 +168,6 @@ struct DashboardView: View {
         }
     }
     
-    // MARK: - 快捷操作
     private var quickActionsSection: some View {
         VStack(spacing: 12) {
             Text("快捷操作")
@@ -160,10 +178,21 @@ struct DashboardView: View {
                 QuickActionButton(
                     icon: "checkmark.circle.fill",
                     title: "审批授权",
-                    subtitle: "待处理 0 项",
+                    subtitle: "待处理 \(viewModel.pendingEndUserCount) 项",
                     color: .blue,
                     action: {
-                        // TODO: 跳转到审批页面
+                        selectedTab = 2
+                    }
+                )
+                
+                // 新增：采购审批
+                QuickActionButton(
+                    icon: "doc.text.magnifyingglass",
+                    title: "采购审批",
+                    subtitle: "待处理 \(viewModel.pendingPurchaseCount) 项",
+                    color: .purple,
+                    action: {
+                        showingPurchaseApproval = true
                     }
                 )
                 
@@ -173,7 +202,7 @@ struct DashboardView: View {
                     subtitle: "生成专属二维码",
                     color: .green,
                     action: {
-                        showingQRCodes = true   // ✅ 正确触发 sheet
+                        showingQRCodes = true
                     }
                 )
                 
@@ -294,6 +323,6 @@ struct DashboardView: View {
 }
 
 #Preview {
-    DashboardView()
+    DashboardView(selectedTab: .constant(0))
         .environmentObject(AuthService.shared)
 }

@@ -34,9 +34,11 @@ struct TeamView: View {
             .refreshable {
                 await viewModel.refresh()
             }
-            .task {
-                await viewModel.loadAgents()
-                await viewModel.loadPendingAgents()
+            .onAppear {
+                Task {
+                    await viewModel.loadAgents()
+                    await viewModel.loadPendingAgents()
+                }
             }
         }
         .badge(viewModel.pendingAgents.count)

@@ -59,8 +59,11 @@ struct ProductManagementView: View {
         .refreshable {
             await viewModel.loadProducts()
         }
-        .task {
-            await viewModel.loadProducts()
+        // 改为
+        .onAppear {
+            Task {
+                await viewModel.loadProducts()
+            }
         }
         .sheet(isPresented: $showingCreateSheet) {
             ProductEditView(viewModel: viewModel, product: nil)

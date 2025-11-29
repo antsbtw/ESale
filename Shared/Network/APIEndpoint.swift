@@ -25,7 +25,7 @@ enum APIEndpoint {
     case registerViaQRCode(code: String, username: String, password: String, mobile: String, email: String?)
     
     // 二维码
-    case createQRCode(productPlanId: String?, scene: String, remark: String?)
+    case createQRCode(productPlanId: String?, purpose: String, isTrial: Bool, trialDays: Int)
     case myQRCodes
     case qrCodeInfo(code: String)
     case deleteQRCode(id: String)
@@ -70,8 +70,22 @@ enum APIEndpoint {
     case parentQuotas
     case createPaymentSessionFromParent(sellerId: String, productId: String, quantity: Int, amount: Double)
     case myPackages  // 我创建的套餐（套餐管理用）
+    
     case pendingEndUsers  // 待激活终端用户
     case activateEndUser(userId: String, approved: Bool, remark: String?)
+    case endUserList(page: Int, pageSize: Int)  // 已激活用户列表
+    case deactivateEndUser(userId: String, reason: String?)  // 停用用户
+    // ⭐⭐⭐ 产品注册码（新增）
+    case productQRCodes                      // 获取产品注册码列表
+    case createProductQRCode(planId: String) // 创建产品注册码
+    case productPlans                        // 获取产品套餐列表
+    
+    case analyticsOverview(period: String)   // 统计概览
+    case analyticsTrend                      // 趋势数据
+    case analyticsTeamRanking                // 团队排行
+    case analyticsQuotaUsage                 // 配额使用
+    // ⭐ 个人信息
+    case updateProfile(mobile: String, email: String)
     
     var path: String {
         switch self {
@@ -168,6 +182,27 @@ enum APIEndpoint {
             return "/agent/enduser/pending"
         case .activateEndUser:
             return "/agent/approve"  // 复用审批接口
+        case .endUserList:
+            return "/agent/enduser/list"
+        case .deactivateEndUser:
+            return "/agent/enduser/deactivate"
+        case .productQRCodes:
+            return "/agent/qrcode/list"
+        case .createProductQRCode:
+            return "/agent/qrcode/create"
+        case .productPlans:
+            return "/product/plans"
+            // ⭐ 数据分析
+        case .analyticsOverview:
+            return "/agent/analytics/overview"
+        case .analyticsTrend:
+            return "/agent/analytics/trend"
+        case .analyticsTeamRanking:
+            return "/agent/analytics/team-ranking"
+        case .analyticsQuotaUsage:
+            return "/agent/analytics/quota-usage"
+        case .updateProfile:
+            return "/agent/profile/update"
         }
     }
     
@@ -175,7 +210,8 @@ enum APIEndpoint {
         switch self {
         case .login, .createAgent, .createQRCode, .approveAgent, .changePassword, .registerViaQRCode,
                 .confirmPayment, .rejectPayment, .createProduct, .createPackage, .createPaymentSession,
-                .adminConfirmPayment, .agentPurchaseConfirm, .agentPurchaseReject, .createPaymentSessionFromParent:
+                .adminConfirmPayment, .agentPurchaseConfirm, .agentPurchaseReject, .createPaymentSessionFromParent,
+                .activateEndUser, .createProductQRCode, .deactivateEndUser, .updateProfile:  // ⭐ 添加 .updateProfile
             return "POST"
         case .updateAgentStatus, .updateProduct, .updateProductStatus, .updatePackage, .updatePackageStatus:  // ✅ 添加 .updatePackage, .updatePackageStatus
             return "PUT"
@@ -204,11 +240,10 @@ enum APIEndpoint {
             var params: [String: Any] = ["agentId": agentId, "approved": approved]
             if let remark = remark { params["remark"] = remark }
             return params
-        case .createQRCode(let productPlanId, let scene, let remark):
-            var params: [String: Any] = ["scene": scene]
-            if let productPlanId = productPlanId { params["productPlanId"] = productPlanId }
-            if let remark = remark { params["remark"] = remark }
-            return params
+        case .createQRCode(let productPlanId, let purpose, let isTrial, let trialDays):
+                    var params: [String: Any] = ["purpose": purpose, "is_trial": isTrial, "trial_days": trialDays]
+                    if let productPlanId = productPlanId { params["product_plan_id"] = productPlanId }
+                    return params
         case .changePassword(let oldPassword, let newPassword):
             return ["oldPassword": oldPassword, "newPassword": newPassword]
         case .registerViaQRCode(let code, let username, let password, let mobile, let email):
@@ -329,6 +364,14 @@ enum APIEndpoint {
             var params: [String: Any] = ["agentId": userId, "approved": approved]
             if let remark = remark { params["remark"] = remark }
             return params
+        case .deactivateEndUser(let userId, let reason):
+            var params: [String: Any] = ["userId": userId]
+            if let reason = reason { params["reason"] = reason }
+            return params
+        case .createProductQRCode(let planId):
+            return ["purpose": "enduser", "product_plan_id": planId]
+        case .updateProfile(let mobile, let email):
+            return ["mobile": mobile, "email": email]
         default:
             return nil
         }
@@ -363,6 +406,17 @@ enum APIEndpoint {
             return [URLQueryItem(name: "status", value: status)]
         case .createPaymentSessionFromParent:
             return nil
+        case .endUserList(let page, let pageSize):
+            return [
+                URLQueryItem(name: "page", value: "\(page)"),
+                URLQueryItem(name: "pageSize", value: "\(pageSize)")
+            ]
+        case .productQRCodes:
+            return [URLQueryItem(name: "purpose", value: "enduser")]
+            // ⭐ 数据分析
+        case .analyticsOverview(let period):
+            return [URLQueryItem(name: "period", value: period)]
+            
         default:
             return nil
         }

@@ -22,7 +22,11 @@ struct AgentDetailView: View {
             .navigationTitle("代理详情")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
-            .task { await viewModel.loadAgentDetail(agentId: agentId) }
+            .onAppear {
+                Task {
+                    await viewModel.loadAgentDetail(agentId: agentId)
+                }
+            }
             .sheet(isPresented: $showingEditSheet) { editSheet }
             .alert("审批确认", isPresented: $showingApprovalAlert) { approvalAlert } message: { approvalMessage }
             .alert("禁用代理", isPresented: $showingDisableAlert) { disableAlert } message: { disableMessage }
@@ -407,11 +411,7 @@ class AgentDetailViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var currentUserId: String = ""
     
-    init() {
-        Task {
-            await loadCurrentUser()
-        }
-    }
+    init() {}
     
     private func loadCurrentUser() async {
         do {
@@ -420,16 +420,31 @@ class AgentDetailViewModel: ObservableObject {
                 responseType: User.self
             )
             currentUserId = response.id
+            print("✅ 获取当前用户ID成功: \(currentUserId)")
         } catch {
             print("❌ 获取当前用户ID失败: \(error)")
         }
     }
     
     func loadAgentDetail(agentId: String) async {
+        // 确保先获取当前用户ID
+        if currentUserId.isEmpty {
+            await loadCurrentUser()
+        }
+        
+        // 新增调试日志
+        print("🔍 当前用户ID: \(currentUserId)")
+        
         isLoading = true
         
         do {
             self.agent = try await APIClient.shared.get(.agentDetail(id: agentId))
+            
+            // 新增调试日志
+            print("🔍 代理ID: \(self.agent?.id ?? "nil")")
+            print("🔍 代理parentId: \(self.agent?.parentId ?? "nil")")
+            print("🔍 代理状态: \(self.agent?.status ?? -1)")
+            print("🔍 是否匹配: \(self.agent?.parentId == currentUserId)")
             
             let response: PaginatedResponse<AgentSummary> = try await APIClient.shared.get(
                 .agents(page: 1, pageSize: 100, status: nil)

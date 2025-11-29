@@ -9,9 +9,10 @@ import SwiftUI
 
 struct AuthorizationView: View {
     @StateObject private var viewModel = AuthorizationViewModel()
+    @EnvironmentObject var authService: AuthService
     @State private var showQuotaDetail = false
-    @State private var showAllRequests = false
     @State private var showAllPackages = false
+    @State private var showTrialQRCodeGenerator = false
     
     var body: some View {
         NavigationView {
@@ -20,8 +21,21 @@ struct AuthorizationView: View {
                     // 配额概览区域
                     quotaSection
                     
-                    // 待激活请求区域
-                    activationRequestsSection
+                    // 管理员试用二维码入口
+                    if authService.currentUser?.role == .admin {
+                        trialQRCodeSection
+                    }
+                    
+                    // 待激活终端用户区域（仅代理可见）
+                    if authService.currentUser?.role != .admin {
+                        
+                        qrCodeSection
+                        
+                        pendingEndUsersSection
+                        
+                        // 用户列表区域（仅代理可见）
+                        activeEndUsersSection
+                    }
                     
                     // 套餐列表区域
                     packagesSection
@@ -29,6 +43,11 @@ struct AuthorizationView: View {
                 .padding()
             }
             .navigationTitle("授权管理")
+            .onAppear {
+                Task {
+                    await viewModel.loadAll()
+                }
+            }
             .refreshable {
                 await viewModel.refresh()
             }
@@ -84,63 +103,131 @@ struct AuthorizationView: View {
         }
     }
     
-    // MARK: - 待激活请求区域
-    private var activationRequestsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("🔔 待激活请求")
-                    .font(.headline)
+    // MARK: - 试用二维码入口（管理员专用）
+    
+    
+    private var trialQRCodeSection: some View {
+        Button {
+            showTrialQRCodeGenerator = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "gift.fill")
+                    .font(.title2)
+                    .foregroundColor(.orange)
+                    .frame(width: 44, height: 44)
+                    .background(Color.orange.opacity(0.1))
+                    .cornerRadius(10)
                 
-                if viewModel.pendingCount > 0 {
-                    Text("\(viewModel.pendingCount)")
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("试用二维码")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    Text("生成试用码，用户扫码自动激活")
                         .font(.caption)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
-                        .background(Color.red)
-                        .cornerRadius(10)
+                        .foregroundColor(.secondary)
                 }
                 
                 Spacer()
                 
-                if viewModel.pendingCount > 3 {
-                    Button(action: {
-                        showAllRequests = true
-                    }) {
-                        Text("查看全部")
-                            .font(.subheadline)
-                            .foregroundColor(.blue)
-                    }
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding()
+            .background(Color(.systemBackground))
+            .cornerRadius(12)
+            .shadow(color: Color.black.opacity(0.05), radius: 5)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .sheet(isPresented: $showTrialQRCodeGenerator) {
+            QRCodeGeneratorView(isPresented: $showTrialQRCodeGenerator)
+                .environmentObject(authService)
+        }
+    }
+    
+    // MARK: - 招募二维码入口
+    private var qrCodeSection: some View {
+        NavigationLink(destination: ProductQRCodesView()) {
+            HStack(spacing: 12) {
+                Image(systemName: "qrcode")
+                    .font(.title2)
+                    .foregroundColor(.green)
+                    .frame(width: 44, height: 44)
+                    .background(Color.green.opacity(0.1))
+                    .cornerRadius(10)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("招募二维码")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    Text("生成二维码邀请终端用户注册")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding()
+            .background(Color(.systemBackground))
+            .cornerRadius(12)
+            .shadow(color: Color.black.opacity(0.05), radius: 5)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    // MARK: - 待激活终端用户区域
+    private var pendingEndUsersSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("🔔 待激活用户")
+                    .font(.headline)
+                
+                if viewModel.pendingEndUserCount > 0 {
+                    Text("\(viewModel.pendingEndUserCount)")
+                        .font(.caption)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(Color.orange)
+                        .cornerRadius(10)
+                }
+                
+                Spacer()
             }
             
-            if viewModel.isLoadingRequests {
+            if viewModel.isLoadingEndUsers {
                 ProgressView()
                     .frame(maxWidth: .infinity)
                     .padding()
-            } else if viewModel.pendingRequests.isEmpty {
+            } else if viewModel.pendingEndUsers.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "checkmark.circle")
                         .font(.system(size: 40))
                         .foregroundColor(.green)
-                    Text("暂无待处理请求")
+                    Text("暂无待激活用户")
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
             } else {
                 VStack(spacing: 12) {
-                    ForEach(viewModel.pendingRequests.prefix(3)) { request in
-                        ActivationRequestRow(
-                            request: request,
-                            onConfirm: {
+                    ForEach(viewModel.pendingEndUsers) { user in
+                        EndUserActivationRow(
+                            user: user,
+                            onActivate: {
                                 Task {
-                                    await handleConfirm(request)
+                                    await viewModel.activateEndUser(userId: user.id)
                                 }
                             },
                             onReject: {
                                 Task {
-                                    await handleReject(request)
+                                    await viewModel.rejectEndUser(userId: user.id)
                                 }
                             }
                         )
@@ -152,9 +239,51 @@ struct AuthorizationView: View {
         .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.05), radius: 5)
-        .sheet(isPresented: $showAllRequests) {
-            AllActivationRequestsView(viewModel: viewModel)
+    }
+    
+    // MARK: - 用户列表入口
+    private var activeEndUsersSection: some View {
+        NavigationLink(destination: EndUserListView(viewModel: viewModel)) {
+            HStack(spacing: 12) {
+                Image(systemName: "person.2.fill")
+                    .font(.title2)
+                    .foregroundColor(.blue)
+                    .frame(width: 44, height: 44)
+                    .background(Color.blue.opacity(0.1))
+                    .cornerRadius(10)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("用户列表")
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    Text("管理已激活的终端用户")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                if viewModel.activeEndUserCount > 0 {
+                    Text("\(viewModel.activeEndUserCount)")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.blue)
+                        .cornerRadius(12)
+                }
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding()
+            .background(Color(.systemBackground))
+            .cornerRadius(12)
+            .shadow(color: Color.black.opacity(0.05), radius: 5)
         }
+        .buttonStyle(PlainButtonStyle())
     }
     
     // MARK: - 套餐列表区域
@@ -215,23 +344,87 @@ struct AuthorizationView: View {
             AllPackagesView(viewModel: viewModel)
         }
     }
+}
+
+// MARK: - 终端用户激活行组件
+struct EndUserActivationRow: View {
+    let user: AgentSummary
+    let onActivate: () -> Void
+    let onReject: () -> Void
     
-    // MARK: - Actions
-    private func handleConfirm(_ request: ActivationRequest) async {
-        let success = await viewModel.confirmActivation(requestId: request.id)
-        if success {
-            // 显示成功提示
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                // 头像
+                Circle()
+                    .fill(Color.purple.opacity(0.2))
+                    .frame(width: 44, height: 44)
+                    .overlay(
+                        Text(user.username.prefix(1).uppercased())
+                            .font(.headline)
+                            .foregroundColor(.purple)
+                    )
+                
+                // 用户信息
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Text(user.username)
+                            .font(.headline)
+                        
+                        Text("待激活")
+                            .font(.caption2.weight(.bold))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.orange.opacity(0.2))
+                            .foregroundColor(.orange)
+                            .cornerRadius(4)
+                    }
+                    
+                    // 套餐信息
+                    if let productName = user.productName, let planName = user.planName {
+                        HStack(spacing: 4) {
+                            Image(systemName: "cube.box.fill")
+                                .font(.caption)
+                            Text("\(productName) - \(planName)")
+                                .font(.subheadline)
+                        }
+                        .foregroundColor(.blue)
+                    }
+                }
+                
+                Spacer()
+            }
+            
+            // 操作按钮
+            HStack(spacing: 12) {
+                Button(action: onReject) {
+                    Text("拒绝")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(.red)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color.red.opacity(0.1))
+                        .cornerRadius(8)
+                }
+                
+                Button(action: onActivate) {
+                    Text("激活")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color.blue)
+                        .cornerRadius(8)
+                }
+            }
         }
-    }
-    
-    private func handleReject(_ request: ActivationRequest) async {
-        let success = await viewModel.rejectActivation(requestId: request.id)
-        if success {
-            // 显示成功提示
-        }
+        .padding()
+        .background(Color(.secondarySystemBackground))
+        .cornerRadius(10)
     }
 }
 
 #Preview {
     AuthorizationView()
+        .environmentObject(AuthService.shared)
 }

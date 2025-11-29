@@ -10,6 +10,8 @@ import Foundation
 @MainActor
 class DashboardViewModel: ObservableObject {
     @Published var stats: DashboardStats?
+    @Published var pendingEndUserCount: Int = 0
+    @Published var pendingPurchaseCount: Int = 0
     @Published var pendingItems: [PendingItem] = []
     @Published var isLoading = false
     @Published var isRefreshing = false
@@ -25,6 +27,17 @@ class DashboardViewModel: ObservableObject {
         do {
             let response: DashboardStats = try await APIClient.shared.get(.dashboardStats)
             self.stats = response
+            // 加载待激活用户数量
+            struct PendingResponse: Codable {
+                let total: Int
+            }
+            if let pending: PendingResponse = try? await APIClient.shared.get(.pendingEndUsers) {
+                self.pendingEndUserCount = pending.total
+                
+                // 新增：加载待审批采购数量
+                let purchases: [PurchaseRequest] = (try? await APIClient.shared.get(.agentPurchasePending(status: "pending"))) ?? []
+                self.pendingPurchaseCount = purchases.count
+            }
         } catch let error as NetworkError {
             let appError = error.toAppError()
             errorMessage = appError.errorDescription

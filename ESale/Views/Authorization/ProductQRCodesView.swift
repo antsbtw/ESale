@@ -1,15 +1,14 @@
 //
-//  MyQRCodesView.swift
+//  ProductQRCodesView.swift
 //  ESale
 //
-//  Created by wenwu on 11/24/25.
+//  产品注册二维码管理（终端用户扫码注册）
 //
-
 
 import SwiftUI
 
-struct MyQRCodesView: View {
-    @StateObject private var viewModel = MyQRCodesViewModel()
+struct ProductQRCodesView: View {
+    @StateObject private var viewModel = ProductQRCodesViewModel()
     @State private var showingGenerator = false
     
     var body: some View {
@@ -22,7 +21,7 @@ struct MyQRCodesView: View {
                     emptyView
                 } else {
                     ForEach(viewModel.qrCodes) { qrCode in
-                        QRCodeCard(qrCode: qrCode) {
+                        ProductQRCodeCard(qrCode: qrCode) {
                             await viewModel.deleteQRCode(qrCode.id)
                         }
                     }
@@ -31,8 +30,11 @@ struct MyQRCodesView: View {
             .padding()
         }
         .background(Color(.systemGroupedBackground))
-        .navigationTitle("我的二维码")
+        .navigationTitle("用户注册码")
         .navigationBarTitleDisplayMode(.inline)
+        .refreshable {
+            await viewModel.loadQRCodes()
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -49,7 +51,7 @@ struct MyQRCodesView: View {
             }
         }
         .sheet(isPresented: $showingGenerator) {
-            QRCodeGeneratorView(isPresented: $showingGenerator)
+            ProductQRCodeGeneratorView(isPresented: $showingGenerator)
                 .onDisappear {
                     Task {
                         await viewModel.loadQRCodes()
@@ -64,11 +66,11 @@ struct MyQRCodesView: View {
                 .font(.system(size: 60))
                 .foregroundStyle(.gray)
             
-            Text("暂无招商二维码")
+            Text("暂无用户注册码")
                 .font(.headline)
                 .foregroundStyle(.secondary)
             
-            Text("生成二维码后可以分享给其他人注册")
+            Text("生成二维码后分享给终端用户扫码注册")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
@@ -76,7 +78,7 @@ struct MyQRCodesView: View {
             Button {
                 showingGenerator = true
             } label: {
-                Text("生成二维码")
+                Text("生成注册码")
                     .font(.headline)
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -91,20 +93,25 @@ struct MyQRCodesView: View {
     }
 }
 
-// MARK: - QR Code Card
-struct QRCodeCard: View {
-    let qrCode: QRCodeInfo
+// MARK: - Product QR Code Card
+struct ProductQRCodeCard: View {
+    let qrCode: ProductQRCodeInfo
     let onDelete: () async -> Void
     @State private var qrCodeImage: UIImage?
     @State private var showingDeleteAlert = false
-    @State private var isDeleting = false
     
     var body: some View {
         VStack(spacing: 16) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("招商二维码")
+                    Text(qrCode.planName ?? "产品注册码")
                         .font(.headline)
+                    
+                    if let productName = qrCode.productName {
+                        Text(productName)
+                            .font(.subheadline)
+                            .foregroundStyle(.blue)
+                    }
                     
                     Text("创建于 \(formatDate(qrCode.createdAt))")
                         .font(.caption)
@@ -116,12 +123,12 @@ struct QRCodeCard: View {
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("\(qrCode.registerCount)")
                         .font(.title2.weight(.bold))
-                        .foregroundStyle(.blue)
-                    Text("注册人数")
+                        .foregroundStyle(.green)
+                    Text("已注册")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                // ✅ 删除按钮
+                
                 Button {
                     showingDeleteAlert = true
                 } label: {
@@ -148,14 +155,14 @@ struct QRCodeCard: View {
             // 分享按钮
             ShareLink(
                 item: buildURL(),
-                message: Text("扫码加入我的团队")
+                message: Text("扫码注册使用 \(qrCode.productName ?? "产品")")
             ) {
-                Label("分享二维码", systemImage: "square.and.arrow.up")
+                Label("分享注册码", systemImage: "square.and.arrow.up")
                     .font(.headline)
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.blue.gradient)
+                    .background(Color.green.gradient)
                     .cornerRadius(12)
             }
         }
@@ -166,26 +173,24 @@ struct QRCodeCard: View {
         .onAppear {
             qrCodeImage = createQRCodeImage(from: buildURL())
         }
-        .alert("删除二维码", isPresented: $showingDeleteAlert) {
+        .alert("删除注册码", isPresented: $showingDeleteAlert) {
             Button("取消", role: .cancel) { }
             Button("删除", role: .destructive) {
                 Task {
-                    isDeleting = true
                     await onDelete()
                 }
             }
         } message: {
-            Text("确认要删除这个二维码吗？删除后无法恢复。")
+            Text("确认要删除这个注册码吗？删除后无法恢复。")
         }
     }
     
     private func buildURL() -> String {
-        return "esale://register?code=\(qrCode.id)"
+        return "esale://register?code=\(qrCode.id)&type=enduser"
     }
     
     private func formatDate(_ dateString: String) -> String {
-        // 简单格式化，你可以根据需要调整
-        return dateString.prefix(10).replacingOccurrences(of: "-", with: "/")
+        return String(dateString.prefix(10)).replacingOccurrences(of: "-", with: "/")
     }
     
     private func createQRCodeImage(from string: String) -> UIImage? {
@@ -208,37 +213,37 @@ struct QRCodeCard: View {
 }
 
 // MARK: - Models
-struct QRCodeInfo: Identifiable, Codable {
+struct ProductQRCodeInfo: Identifiable, Codable {
     let id: String
-    let agentId: String      // ✅ 用 camelCase，自动转换会处理
+    let agentId: String
     let purpose: String
+    let productPlanId: String?
+    let planName: String?
+    let productName: String?
     let createdAt: String
     let expiresAt: String
     let registerCount: Int
-    
-    // ❌ 删除 init(from decoder:)
-    // ❌ 删除 CodingKeys
 }
 
 // MARK: - ViewModel
 @MainActor
-class MyQRCodesViewModel: ObservableObject {
-    @Published var qrCodes: [QRCodeInfo] = []
+class ProductQRCodesViewModel: ObservableObject {
+    @Published var qrCodes: [ProductQRCodeInfo] = []
     @Published var isLoading = false
     
     func loadQRCodes() async {
         isLoading = true
         
         do {
-            qrCodes = try await APIClient.shared.get(.myQRCodes)
+            // 只获取 purpose = "enduser" 的二维码
+            qrCodes = try await APIClient.shared.get(.productQRCodes)
         } catch {
-            print("❌ 加载二维码列表失败: \(error)")
+            print("❌ 加载产品注册码失败: \(error)")
         }
         
         isLoading = false
     }
     
-    // ✅ 新增删除方法
     func deleteQRCode(_ id: String) async {
         do {
             struct DeleteResponse: Codable {
@@ -251,19 +256,15 @@ class MyQRCodesViewModel: ObservableObject {
             )
             
             print("✅ 删除成功")
-            
-            // 从列表中移除
             qrCodes.removeAll { $0.id == id }
-            
         } catch {
             print("❌ 删除失败: \(error)")
         }
     }
-    
 }
 
 #Preview {
     NavigationStack {
-        MyQRCodesView()
+        ProductQRCodesView()
     }
 }

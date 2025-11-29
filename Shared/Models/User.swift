@@ -29,9 +29,12 @@ struct User: Codable, Identifiable {
         case .admin:
             return "管理员"
         case .agent:
-            return "代理商 Lv\(agentLevel ?? 0)"
+            if let level = agentLevel, level > 0 {
+                return "\(level)级代理商"
+            }
+            return "代理商"
         case .enduser:
-            return "最终用户"
+            return "终端用户"
         }
     }
 }
