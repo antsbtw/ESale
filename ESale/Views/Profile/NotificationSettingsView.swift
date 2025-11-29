@@ -171,8 +171,3 @@ struct NotificationToggle: View {
     }
 }
 
-#Preview {
-    NavigationStack {
-        NotificationSettingsView()
-    }
-}

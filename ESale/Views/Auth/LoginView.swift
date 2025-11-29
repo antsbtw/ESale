@@ -18,13 +18,13 @@ struct LoginView: View {
     @State private var errorMessage = ""
     
     var body: some View {
-        NavigationStack {
+        NavigationContainer {
             VStack(spacing: 30) {
                 // Logo区域
                 VStack(spacing: 16) {
                     Image(systemName: "building.2.crop.circle.fill")
                         .font(.system(size: 80))
-                        .foregroundStyle(.blue.gradient)
+                        .foregroundStyle(Color.blue.compatGradient)
                     
                     Text("ESale 销售管理")
                         .font(.title.bold())
@@ -115,6 +115,7 @@ struct LoginView: View {
                 Text(errorMessage)
             }
         }
+        .adaptiveMaxWidth(520)
     }
     
     // MARK: - Computed Properties
@@ -123,7 +124,7 @@ struct LoginView: View {
     }
     
     private var loginButtonBackground: some ShapeStyle {
-        isLoginDisabled ? AnyShapeStyle(.gray) : AnyShapeStyle(.blue.gradient)
+        isLoginDisabled ? AnyShapeStyle(.gray) : AnyShapeStyle(Color.blue.compatGradient)
     }
     
     // MARK: - Actions

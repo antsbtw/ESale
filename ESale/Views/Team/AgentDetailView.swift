@@ -160,7 +160,7 @@ struct AgentDetailView: View {
     private func agentHeaderCard(_ agent: AgentSummary) -> some View {
         VStack(spacing: 16) {
             Circle()
-                .fill(Color.blue.gradient)
+                .fill(Color.blue.compatGradient)
                 .frame(width: 80, height: 80)
                 .overlay(
                     Text(agent.username.prefix(1).uppercased())

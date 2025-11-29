@@ -123,11 +123,12 @@ struct PurchaseApprovalView: View {
     var body: some View {
         List {
             if viewModel.pendingRequests.isEmpty && !viewModel.isLoading {
-                ContentUnavailableView(
-                    "暂无待审批请求",
+                CompatEmptyStateView(
+                    title: "暂无待审批请求",
                     systemImage: "checkmark.circle",
-                    description: Text("所有采购请求都已处理")
+                    description: "所有采购请求都已处理"
                 )
+                .listRowBackground(Color.clear)
             } else {
                 ForEach(viewModel.pendingRequests) { request in
                     PurchaseRequestRow(
@@ -191,6 +192,7 @@ struct PurchaseApprovalView: View {
         } message: {
             Text(viewModel.errorMessage ?? "")
         }
+        .adaptiveMaxWidth(820)
     }
 }
 
@@ -280,11 +282,5 @@ struct PurchaseRequestRow: View {
             return datePart
         }
         return dateString
-    }
-}
-
-#Preview {
-    NavigationStack {
-        PurchaseApprovalView()
     }
 }

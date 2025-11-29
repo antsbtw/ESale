@@ -25,8 +25,7 @@ struct ActivationRequestRow: View {
                 HStack {
                     // 请求类型标签
                     Text(request.requestType)
-                        .font(.caption)
-                        .fontWeight(.medium)
+                        .font(.system(size: 12, weight: .medium))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(request.packageId != nil ? Color.blue.opacity(0.1) : Color.green.opacity(0.1))
@@ -48,8 +47,7 @@ struct ActivationRequestRow: View {
                             .foregroundStyle(.secondary)
                         
                         Text(request.amountText)
-                            .font(.title2)
-                            .fontWeight(.bold)
+                            .font(.system(size: 22, weight: .bold))
                             .foregroundStyle(.blue)
                     }
                     
@@ -71,8 +69,7 @@ struct ActivationRequestRow: View {
                         showRejectAlert = true
                     } label: {
                         Text("拒绝")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
+                            .font(.system(size: 15, weight: .medium))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
                             .background(.red.opacity(0.08))
@@ -92,8 +89,7 @@ struct ActivationRequestRow: View {
                             }
                             Text("确认收款")
                         }
-                        .font(.subheadline)
-                        .fontWeight(.medium)
+                        .font(.system(size: 15, weight: .medium))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                         .background(isProcessing ? Color.gray : Color.blue)
@@ -136,7 +132,7 @@ struct AllActivationRequestsView: View {
     @SwiftUI.Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        NavigationStack {
+        NavigationContainer {
             Group {
                 if viewModel.pendingRequests.isEmpty {
                     emptyStateView

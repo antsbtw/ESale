@@ -35,7 +35,7 @@ struct StatCard: View {
             HStack {
                 Image(systemName: icon)
                     .font(.title3)
-                    .foregroundStyle(color.gradient)
+                    .foregroundStyle(color.compatGradient)
                 
                 Text(title)
                     .font(.subheadline)

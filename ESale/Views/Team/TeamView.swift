@@ -11,7 +11,7 @@ struct TeamView: View {
     @StateObject private var viewModel = AgentListViewModel()
     
     var body: some View {
-        NavigationStack {
+        NavigationContainer {
             VStack(spacing: 0) {
                 // 状态筛选标签
                 statusFilterBar
@@ -41,6 +41,7 @@ struct TeamView: View {
                 }
             }
         }
+        .adaptiveMaxWidth(900)
         .badge(viewModel.pendingAgents.count)
     }
     

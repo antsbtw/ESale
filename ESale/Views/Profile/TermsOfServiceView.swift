@@ -180,8 +180,3 @@ struct TermsOfServiceView: View {
     }
 }
 
-#Preview {
-    NavigationStack {
-        TermsOfServiceView()
-    }
-}

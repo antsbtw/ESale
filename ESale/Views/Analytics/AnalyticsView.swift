@@ -12,7 +12,7 @@ struct AnalyticsView: View {
     @StateObject private var viewModel = AnalyticsViewModel()
     
     var body: some View {
-        NavigationStack {
+        NavigationContainer {
             ScrollView {
                 VStack(spacing: 20) {
                     if viewModel.isLoading && viewModel.overview == nil {

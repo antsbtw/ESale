@@ -50,12 +50,13 @@ struct MyQRCodesView: View {
         }
         .sheet(isPresented: $showingGenerator) {
             QRCodeGeneratorView(isPresented: $showingGenerator)
-                .onDisappear {
-                    Task {
-                        await viewModel.loadQRCodes()
-                    }
+            .onDisappear {
+                Task {
+                    await viewModel.loadQRCodes()
                 }
+            }
         }
+        .adaptiveMaxWidth(820)
     }
     
     private var emptyView: some View {
@@ -81,7 +82,7 @@ struct MyQRCodesView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.blue.gradient)
+                    .background(Color.blue.compatGradient)
                     .cornerRadius(12)
             }
             .padding(.horizontal, 40)
@@ -146,17 +147,21 @@ struct QRCodeCard: View {
             }
             
             // 分享按钮
-            ShareLink(
-                item: buildURL(),
-                message: Text("扫码加入我的团队")
-            ) {
-                Label("分享二维码", systemImage: "square.and.arrow.up")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue.gradient)
-                    .cornerRadius(12)
+            if let url = shareURL {
+                if #available(iOS 16.0, *) {
+                    ShareLink(
+                        item: url,
+                        message: Text("扫码加入我的团队")
+                    ) {
+                        shareButtonLabel
+                    }
+                } else {
+                    Button {
+                        shareLegacy(url)
+                    } label: {
+                        shareButtonLabel
+                    }
+                }
             }
         }
         .padding()
@@ -164,7 +169,7 @@ struct QRCodeCard: View {
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.05), radius: 8)
         .onAppear {
-            qrCodeImage = createQRCodeImage(from: buildURL())
+            qrCodeImage = createQRCodeImage(from: shareURL?.absoluteString ?? "")
         }
         .alert("删除二维码", isPresented: $showingDeleteAlert) {
             Button("取消", role: .cancel) { }
@@ -179,8 +184,8 @@ struct QRCodeCard: View {
         }
     }
     
-    private func buildURL() -> String {
-        return "esale://register?code=\(qrCode.id)"
+    private var shareURL: URL? {
+        URL(string: "esale://register?code=\(qrCode.id)")
     }
     
     private func formatDate(_ dateString: String) -> String {
@@ -204,6 +209,29 @@ struct QRCodeCard: View {
         guard let cgImage = context.createCGImage(scaledImage, from: scaledImage.extent) else { return nil }
         
         return UIImage(cgImage: cgImage)
+    }
+    
+    @ViewBuilder
+    private var shareButtonLabel: some View {
+        Label("分享二维码", systemImage: "square.and.arrow.up")
+            .font(.headline)
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color.blue.compatGradient)
+            .cornerRadius(12)
+    }
+    
+    private func shareLegacy(_ url: URL) {
+        let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        DispatchQueue.main.async {
+            guard
+                let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                let root = scene.windows.first?.rootViewController
+            else { return }
+            
+            root.present(activityVC, animated: true)
+        }
     }
 }
 
@@ -260,10 +288,4 @@ class MyQRCodesViewModel: ObservableObject {
         }
     }
     
-}
-
-#Preview {
-    NavigationStack {
-        MyQRCodesView()
-    }
 }

@@ -19,7 +19,7 @@ struct QuickActionButton: View {
             VStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 28))
-                    .foregroundStyle(color.gradient)
+                    .foregroundStyle(color.compatGradient)
                 
                 Text(title)
                     .font(.caption)

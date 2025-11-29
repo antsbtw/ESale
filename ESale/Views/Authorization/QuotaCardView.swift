@@ -126,7 +126,7 @@ struct QuotaDetailView: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        NavigationStack {        // ← NavigationView → NavigationStack（iOS17/18 标准）
+        NavigationContainer {
             List {
                 if let summary = viewModel.quotaSummary {
                     Section {

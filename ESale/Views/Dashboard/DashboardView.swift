@@ -57,12 +57,12 @@ struct DashboardView: View {
             }
         }
         .sheet(isPresented: $showingQRCodes) {
-            NavigationStack {
+            NavigationContainer {
                 MyQRCodesView()
             }
         }
         .sheet(isPresented: $showingPurchaseApproval) {
-            NavigationStack {
+            NavigationContainer {
                 PurchaseApprovalView()
             }
         }
@@ -78,6 +78,7 @@ struct DashboardView: View {
         } message: {
             Text(viewModel.errorMessage ?? "未知错误")
         }
+        .adaptiveMaxWidth(900)
     }
     
     // MARK: - 用户头部
@@ -97,8 +98,8 @@ struct DashboardView: View {
             Spacer()
             
             // 头像
-            Circle()
-                .fill(Color.blue.gradient)
+                Circle()
+                    .fill(Color.blue.compatGradient)
                 .frame(width: 50, height: 50)
                 .overlay(
                     Text(authService.currentUser?.username.prefix(1).uppercased() ?? "U")

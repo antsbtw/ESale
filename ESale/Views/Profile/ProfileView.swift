@@ -13,7 +13,7 @@ struct ProfileView: View {
     @State private var showingLogoutAlert: Bool = false
     
     var body: some View {
-        NavigationStack {
+        NavigationContainer {
             List {
                 // 用户信息卡片
                 userInfoSection
@@ -136,6 +136,7 @@ struct ProfileView: View {
         } message: {
             Text("确认要退出登录吗？")
         }
+        .adaptiveMaxWidth(820)
     }
     
     // MARK: - 用户信息卡片
@@ -144,7 +145,7 @@ struct ProfileView: View {
             HStack(spacing: 16) {
                 // 头像
                 Circle()
-                    .fill(Color.blue.gradient)
+                    .fill(Color.blue.compatGradient)
                     .frame(width: 70, height: 70)
                     .overlay(
                         Text(authService.currentUser?.username.prefix(1).uppercased() ?? "U")

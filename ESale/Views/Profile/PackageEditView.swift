@@ -35,7 +35,7 @@ struct PackageEditView: View {
     }
     
     var body: some View {
-        NavigationStack {
+        NavigationContainer {
             Form {
                 // 基本信息
                 Section("基本信息") {
@@ -115,6 +115,7 @@ struct PackageEditView: View {
                         .cornerRadius(10)
                 }
             }
+            .adaptiveMaxWidth(720)
         }
     }
     

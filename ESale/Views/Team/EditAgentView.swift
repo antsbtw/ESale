@@ -33,7 +33,7 @@ struct EditAgentView: View {
     }
     
     var body: some View {
-        NavigationStack {
+        NavigationContainer {
             Form {
                 Section("基本信息") {
                     HStack {
@@ -113,6 +113,7 @@ struct EditAgentView: View {
                 Text("代理信息已更新")
             }
         }
+        .adaptiveMaxWidth(720)
     }
     
     private func statusBadge(_ status: Int) -> some View {

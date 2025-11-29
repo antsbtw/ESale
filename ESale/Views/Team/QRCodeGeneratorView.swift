@@ -27,7 +27,7 @@ struct QRCodeGeneratorView: View {
     }
     
     var body: some View {
-        NavigationStack {
+        NavigationContainer {
             ScrollView {
                 VStack(spacing: 24) {
                     // 管理员试用设置
@@ -205,7 +205,7 @@ struct QRCodeGeneratorView: View {
                     .foregroundStyle(.white)
                     .padding()
                     .frame(maxWidth: .infinity)
-                    .background(Color.blue.gradient)
+                    .background(Color.blue.compatGradient)
                     .cornerRadius(12)
             }
             .padding(.horizontal)
@@ -234,7 +234,7 @@ struct QRCodeGeneratorView: View {
                     .foregroundStyle(.white)
                     .padding()
                     .frame(maxWidth: .infinity)
-                    .background(Color.blue.gradient)
+                    .background(Color.blue.compatGradient)
                     .cornerRadius(12)
             }
             .disabled(isTrial && selectedPlanId == nil)

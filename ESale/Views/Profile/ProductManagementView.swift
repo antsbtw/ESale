@@ -49,10 +49,10 @@ struct ProductManagementView: View {
             if viewModel.isLoading && viewModel.products.isEmpty {
                 ProgressView("加载中...")
             } else if viewModel.products.isEmpty {
-                ContentUnavailableView(
-                    "暂无产品",
+                CompatEmptyStateView(
+                    title: "暂无产品",
                     systemImage: "cube.box",
-                    description: Text("点击右上角添加产品")
+                    description: "点击右上角添加产品"
                 )
             }
         }
@@ -91,6 +91,7 @@ struct ProductManagementView: View {
         } message: {
             Text(viewModel.errorMessage ?? "")
         }
+        .adaptiveMaxWidth(820)
     }
 }
 
@@ -165,11 +166,5 @@ struct ProductRowView: View {
             .padding(.top, 4)
         }
         .padding(.vertical, 4)
-    }
-}
-
-#Preview {
-    NavigationStack {
-        ProductManagementView()
     }
 }

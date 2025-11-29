@@ -40,11 +40,11 @@ struct ESaleApp: App {
             .onOpenURL { url in
                 handleIncomingURL(url)
             }
-            .onChange(of: showRegistration) { oldValue, newValue in
-                print("🔄 showRegistration 变化: \(oldValue) -> \(newValue)")
+            .onChange(of: showRegistration) { newValue in
+                print("🔄 showRegistration 变化: \(newValue)")
             }
-            .onChange(of: registrationCode) { oldValue, newValue in
-                print("🔄 registrationCode 变化: \(oldValue ?? "nil") -> \(newValue ?? "nil")")
+            .onChange(of: registrationCode) { newValue in
+                print("🔄 registrationCode 变化: \(newValue ?? "nil")")
             }
         }
     }

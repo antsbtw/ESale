@@ -20,7 +20,7 @@ struct ChangePasswordView: View {
     @State private var showSuccess: Bool = false
     
     var body: some View {
-        NavigationStack {
+        NavigationContainer {
             Form {
                 Section {
                     SecureField("原密码", text: $oldPassword)
@@ -81,6 +81,7 @@ struct ChangePasswordView: View {
                 Text("密码已成功修改")
             }
         }
+        .adaptiveMaxWidth(600)
     }
     
     private var isValid: Bool {

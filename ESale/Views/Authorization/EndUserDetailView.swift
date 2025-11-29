@@ -146,25 +146,3 @@ struct DetailInfoRow: View {
     }
 }
 
-#Preview {
-    NavigationStack {
-        EndUserDetailView(
-            user: AgentSummary(
-                id: "1",
-                username: "testuser",
-                mobile: "13800138000",
-                email: "test@example.com",
-                role: "enduser",
-                agentLevel: nil,
-                parentId: "parent1",
-                childCount: 0,
-                status: 1,
-                createdAt: "2025-11-27T10:00:00Z",
-                requestedPlanId: "plan1",
-                planName: "月卡",
-                productName: "OBox MyCloud"
-            ),
-            viewModel: AuthorizationViewModel()
-        )
-    }
-}

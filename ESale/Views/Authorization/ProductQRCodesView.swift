@@ -7,6 +7,14 @@
 
 import SwiftUI
 
+private func gradientBackground(_ color: Color) -> some View {
+    LinearGradient(
+        colors: [color.opacity(0.9), color],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+}
+
 struct ProductQRCodesView: View {
     @StateObject private var viewModel = ProductQRCodesViewModel()
     @State private var showingGenerator = false
@@ -36,7 +44,7 @@ struct ProductQRCodesView: View {
             await viewModel.loadQRCodes()
         }
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItem(placement: .navigationBarTrailing) {   // iOS 16 兼容
                 Button {
                     showingGenerator = true
                 } label: {
@@ -83,7 +91,7 @@ struct ProductQRCodesView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.blue.gradient)
+                    .background(gradientBackground(.blue))
                     .cornerRadius(12)
             }
             .padding(.horizontal, 40)
@@ -152,18 +160,19 @@ struct ProductQRCodeCard: View {
                     .frame(width: 200, height: 200)
             }
             
-            // 分享按钮
-            ShareLink(
-                item: buildURL(),
-                message: Text("扫码注册使用 \(qrCode.productName ?? "产品")")
-            ) {
-                Label("分享注册码", systemImage: "square.and.arrow.up")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.green.gradient)
-                    .cornerRadius(12)
+            // iOS 16 可用的 ShareLink（没有 message: 参数）
+            if let shareURL = buildURL() {
+                if #available(iOS 16.0, *) {
+                    ShareLink(item: shareURL) {
+                        shareButtonLabel
+                    }
+                } else {
+                    Button {
+                        shareLegacy(shareURL)
+                    } label: {
+                        shareButtonLabel
+                    }
+                }
             }
         }
         .padding()
@@ -171,7 +180,7 @@ struct ProductQRCodeCard: View {
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.05), radius: 8)
         .onAppear {
-            qrCodeImage = createQRCodeImage(from: buildURL())
+            qrCodeImage = createQRCodeImage(from: buildURL()?.absoluteString ?? "")
         }
         .alert("删除注册码", isPresented: $showingDeleteAlert) {
             Button("取消", role: .cancel) { }
@@ -185,8 +194,8 @@ struct ProductQRCodeCard: View {
         }
     }
     
-    private func buildURL() -> String {
-        return "esale://register?code=\(qrCode.id)&type=enduser"
+    private func buildURL() -> URL? {
+        URL(string: "esale://register?code=\(qrCode.id)&type=enduser")
     }
     
     private func formatDate(_ dateString: String) -> String {
@@ -209,6 +218,29 @@ struct ProductQRCodeCard: View {
         guard let cgImage = context.createCGImage(scaledImage, from: scaledImage.extent) else { return nil }
         
         return UIImage(cgImage: cgImage)
+    }
+    
+    @ViewBuilder
+    private var shareButtonLabel: some View {
+        Label("分享注册码", systemImage: "square.and.arrow.up")
+            .font(.headline)
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(gradientBackground(.green))
+            .cornerRadius(12)
+    }
+    
+    private func shareLegacy(_ url: URL) {
+        let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        DispatchQueue.main.async {
+            guard
+                let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                let root = scene.windows.first?.rootViewController
+            else { return }
+            
+            root.present(activityVC, animated: true)
+        }
     }
 }
 
@@ -235,7 +267,6 @@ class ProductQRCodesViewModel: ObservableObject {
         isLoading = true
         
         do {
-            // 只获取 purpose = "enduser" 的二维码
             qrCodes = try await APIClient.shared.get(.productQRCodes)
         } catch {
             print("❌ 加载产品注册码失败: \(error)")
@@ -260,11 +291,5 @@ class ProductQRCodesViewModel: ObservableObject {
         } catch {
             print("❌ 删除失败: \(error)")
         }
-    }
-}
-
-#Preview {
-    NavigationStack {
-        ProductQRCodesView()
     }
 }

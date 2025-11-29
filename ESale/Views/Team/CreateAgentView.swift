@@ -22,7 +22,7 @@ struct CreateAgentView: View {
     @State private var showingSuccess: Bool = false
     
     var body: some View {
-        NavigationStack {
+        NavigationContainer {
             Form {
                 Section("基本信息") {
                     TextField("用户名", text: $username)
@@ -92,6 +92,7 @@ struct CreateAgentView: View {
                 Text("代理 \(username) 创建成功")
             }
         }
+        .adaptiveMaxWidth(720)
     }
     
     private var isValid: Bool {

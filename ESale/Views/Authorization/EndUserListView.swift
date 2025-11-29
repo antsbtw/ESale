@@ -31,11 +31,12 @@ struct EndUserListView: View {
                 }
                 .listRowBackground(Color.clear)
             } else if filteredUsers.isEmpty {
-                ContentUnavailableView(
-                    searchText.isEmpty ? "暂无用户" : "未找到用户",
+                CompatEmptyStateView(
+                    title: searchText.isEmpty ? "暂无用户" : "未找到用户",
                     systemImage: searchText.isEmpty ? "person.crop.circle.badge.questionmark" : "magnifyingglass",
-                    description: Text(searchText.isEmpty ? "您还没有激活任何终端用户" : "尝试其他搜索关键词")
+                    description: searchText.isEmpty ? "您还没有激活任何终端用户" : "尝试其他搜索关键词"
                 )
+                .listRowBackground(Color.clear)
             } else {
                 ForEach(filteredUsers) { user in
                     NavigationLink(destination: EndUserDetailView(user: user, viewModel: viewModel)) {
@@ -56,7 +57,7 @@ struct EndUserListView: View {
             }
         }
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
                 Text("\(viewModel.activeEndUserCount) 人")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
@@ -110,11 +111,5 @@ struct EndUserRowView: View {
             Spacer()
         }
         .padding(.vertical, 4)
-    }
-}
-
-#Preview {
-    NavigationStack {
-        EndUserListView(viewModel: AuthorizationViewModel())
     }
 }

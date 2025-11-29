@@ -24,7 +24,7 @@ struct EditProfileView: View {
                 HStack {
                     // 头像
                     Circle()
-                        .fill(Color.blue.gradient)
+                        .fill(Color.blue.compatGradient)
                         .frame(width: 60, height: 60)
                         .overlay(
                             Text(authService.currentUser?.username.prefix(1).uppercased() ?? "U")
@@ -128,6 +128,7 @@ struct EditProfileView: View {
         } message: {
             Text("个人信息已更新")
         }
+        .adaptiveMaxWidth(720)
     }
     
     // MARK: - Computed Properties
@@ -221,12 +222,5 @@ struct UserInfoRow: View {
             Spacer()
             Text(value)
         }
-    }
-}
-
-#Preview {
-    NavigationStack {
-        EditProfileView()
-            .environmentObject(AuthService.shared)
     }
 }

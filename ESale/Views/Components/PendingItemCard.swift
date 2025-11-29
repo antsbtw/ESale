@@ -19,7 +19,7 @@ struct PendingItemCard: View {
             HStack(alignment: .top) {
                 Image(systemName: item.iconName)
                     .font(.title3)
-                    .foregroundStyle(item.typeColor.gradient)
+                    .foregroundStyle(item.typeColor.compatGradient)
                     .frame(width: 40, height: 40)
                     .background(item.typeColor.opacity(0.1))
                     .cornerRadius(8)
@@ -69,7 +69,7 @@ struct PendingItemCard: View {
                         .font(.subheadline.bold())
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
-                        .background(item.typeColor.gradient)
+                        .background(item.typeColor.compatGradient)
                         .foregroundStyle(.white)
                         .cornerRadius(8)
                 }

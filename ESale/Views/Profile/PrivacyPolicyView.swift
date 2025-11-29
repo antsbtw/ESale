@@ -194,8 +194,3 @@ struct BulletPoint: View {
     }
 }
 
-#Preview {
-    NavigationStack {
-        PrivacyPolicyView()
-    }
-}

@@ -31,7 +31,7 @@ struct ProductEditView: View {
     }
     
     var body: some View {
-        NavigationStack {
+        NavigationContainer {
             Form {
                 Section("基本信息") {
                     TextField("产品名称", text: $name)
@@ -40,8 +40,7 @@ struct ProductEditView: View {
                         .textInputAutocapitalization(.characters)
                         .disabled(isEditing) // 编辑时不允许修改代码
                     
-                    TextField("产品描述（可选）", text: $description, axis: .vertical)
-                        .lineLimit(3...6)
+                    descriptionInput
                     
                     // 新增：启用开关
                     Toggle("启用产品", isOn: $isActive)
@@ -54,22 +53,7 @@ struct ProductEditView: View {
             }
             .navigationTitle(isEditing ? "编辑产品" : "新增产品")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") {
-                        dismiss()
-                    }
-                }
-                
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(isEditing ? "保存" : "创建") {
-                        Task {
-                            await saveProduct()
-                        }
-                    }
-                    .disabled(!isFormValid || isSaving)
-                }
-            }
+            .toolbar(content: toolbarContent)
             .onAppear {
                 if let product = product {
                     name = product.name
@@ -85,9 +69,30 @@ struct ProductEditView: View {
                         .ignoresSafeArea()
                     ProgressView("保存中...")
                         .padding()
-                        .background(.regularMaterial)
-                        .cornerRadius(10)
+                    .background(.regularMaterial)
+                    .cornerRadius(10)
                 }
+            }
+            .adaptiveMaxWidth(720)
+        }
+    }
+    
+    @ViewBuilder
+    private var descriptionInput: some View {
+        if #available(iOS 16.0, *) {
+            TextField("产品描述（可选）", text: $description, axis: .vertical)
+                .lineLimit(3...6)
+        } else {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("产品描述（可选）")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                TextEditor(text: $description)
+                    .frame(minHeight: 90, maxHeight: 150)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color(.systemGray4), lineWidth: 1)
+                    )
             }
         }
     }
@@ -138,6 +143,24 @@ struct ProductEditView: View {
         
         if success {
             dismiss()
+        }
+    }
+    
+    @ToolbarContentBuilder
+    private func toolbarContent() -> some ToolbarContent {
+        ToolbarItem(placement: .navigationBarLeading) {
+            Button("取消") {
+                dismiss()
+            }
+        }
+        
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Button(isEditing ? "保存" : "创建") {
+                Task {
+                    await saveProduct()
+                }
+            }
+            .disabled(!isFormValid || isSaving)
         }
     }
 }

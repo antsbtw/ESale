@@ -27,7 +27,7 @@ struct ScanRegisterView: View {
     
     var body: some View {
         print("🖼️ ScanRegisterView body 渲染")
-        return NavigationStack {
+        return NavigationContainer {
             ScrollView {
                 VStack(spacing: 20) {
                     // 标题

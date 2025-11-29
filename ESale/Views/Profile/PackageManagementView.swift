@@ -48,10 +48,10 @@ struct PackageManagementView: View {
             if viewModel.isLoading && viewModel.packages.isEmpty {
                 ProgressView("加载中...")
             } else if viewModel.packages.isEmpty {
-                ContentUnavailableView(
-                    "暂无套餐",
+                CompatEmptyStateView(
+                    title: "暂无套餐",
                     systemImage: "shippingbox",
-                    description: Text("点击右上角添加套餐")
+                    description: "点击右上角添加套餐"
                 )
             }
         }
@@ -91,6 +91,7 @@ struct PackageManagementView: View {
         } message: {
             Text(viewModel.errorMessage ?? "")
         }
+        .adaptiveMaxWidth(820)
     }
 }
 
@@ -121,9 +122,8 @@ struct PackageManagementRowView: View {
                     
                     HStack(spacing: 12) {
                         Text(package.priceText)
-                            .font(.subheadline)
+                            .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(.blue)
-                            .fontWeight(.medium)
                         
                         Text(package.durationText)
                             .font(.caption)
@@ -178,11 +178,5 @@ struct PackageManagementRowView: View {
             .padding(.top, 4)
         }
         .padding(.vertical, 4)
-    }
-}
-
-#Preview {
-    NavigationStack {
-        PackageManagementView()
     }
 }
